@@ -1,0 +1,47 @@
+[2026-05-08 10:00:01] INFO  Server starting on port 3000...
+[2026-05-08 10:00:02] INFO  Connecting to database at mongodb://localhost:27017/myapp
+[2026-05-08 10:00:03] INFO  Database connection established successfully.
+[2026-05-08 10:00:04] INFO  Loading middleware: cors, helmet, bodyParser
+[2026-05-08 10:00:05] INFO  Routes registered: /api/users, /api/products, /api/orders
+[2026-05-08 10:00:06] INFO  Server is now listening on http://localhost:3000
+[2026-05-08 10:01:12] INFO  GET /api/products 200 OK - 45ms
+[2026-05-08 10:01:15] INFO  GET /api/users/profile 200 OK - 32ms
+[2026-05-08 10:02:33] ERROR TypeError: Cannot read properties of undefined (reading 'id') at UserController.getProfile (/src/controllers/userController.js:42:18)
+[2026-05-08 10:02:33] ERROR Request failed: GET /api/users/123 - Status 500
+[2026-05-08 10:03:01] INFO  POST /api/auth/login 200 OK - 128ms
+[2026-05-08 10:03:45] WARN  Slow query detected: SELECT * FROM orders WHERE user_id = 587 took 3200ms
+[2026-05-08 10:04:12] INFO  GET /api/orders 200 OK - 89ms
+[2026-05-08 10:05:08] ERROR CRITICAL: MongoDB connection lost - ECONNREFUSED 127.0.0.1:27017
+[2026-05-08 10:05:09] ERROR Attempting reconnection to database... attempt 1/5
+[2026-05-08 10:05:14] ERROR Attempting reconnection to database... attempt 2/5
+[2026-05-08 10:05:19] INFO  Database reconnection successful.
+[2026-05-08 10:06:22] INFO  POST /api/orders 201 Created - 156ms
+[2026-05-08 10:07:30] ERROR Exception in thread "payment-processor": java.lang.NullPointerException at com.payments.StripeService.processPayment(StripeService.java:87)
+[2026-05-08 10:07:30] ERROR Payment processing failed for order #ORD-20260508-4421 - Amount: $299.99
+[2026-05-08 10:08:15] INFO  GET /api/products?category=electronics 200 OK - 67ms
+[2026-05-08 10:09:44] WARN  Memory usage high: 87% of available heap (1.4GB / 1.6GB)
+[2026-05-08 10:10:02] ERROR Failed to send email notification: SMTP connection timeout after 30000ms - host: smtp.mailservice.com:587
+[2026-05-08 10:10:03] ERROR Traceback (most recent call last):
+    File "/app/services/notification.py", line 156, in send_email
+        connection = smtplib.SMTP(host, port, timeout=30)
+    File "/usr/lib/python3.11/smtplib.py", line 255, in __init__
+        raise socket.timeout("Connection timed out")
+    socket.timeout: Connection timed out
+[2026-05-08 10:11:30] INFO  Scheduled job: cleanup_expired_sessions - removed 234 sessions
+[2026-05-08 10:12:45] INFO  GET /api/users 200 OK - 41ms
+[2026-05-08 10:13:22] ERROR ReferenceError: validateInput is not defined at /src/middleware/validation.js:23:5
+[2026-05-08 10:13:22] ERROR Request validation failed for POST /api/users/register - middleware error
+[2026-05-08 10:14:00] INFO  WebSocket connection established - client: ws://192.168.1.45:8080
+[2026-05-08 10:15:30] WARN  Rate limit approaching for IP 203.45.67.89 - 95/100 requests per minute
+[2026-05-08 10:16:12] ERROR Unhandled Promise Rejection: Error: ENOENT: no such file or directory, open '/uploads/avatar-user-5582.png'
+[2026-05-08 10:16:12] ERROR File upload failed: User avatar image not found after processing
+[2026-05-08 10:17:00] INFO  GET /api/dashboard/stats 200 OK - 234ms
+[2026-05-08 10:18:45] INFO  Backup job initiated - backing up collections: users, orders, products
+[2026-05-08 10:19:02] ERROR Backup failed for collection 'orders': MongoServerError: disk space insufficient - available: 245MB, required: 1.2GB
+[2026-05-08 10:19:03] CRITICAL System alert: Disk space critically low on /dev/sda1 - 2% remaining
+[2026-05-08 10:20:00] INFO  Health check: API response time avg 89ms, uptime 99.2%
+[2026-05-08 10:21:15] ERROR Authentication failed: JWT token expired for user admin@company.com - token issued at 2026-05-07T10:21:15Z
+[2026-05-08 10:22:30] INFO  Cache hit ratio: 78.5% - Redis status: connected
+[2026-05-08 10:23:00] INFO  Server graceful shutdown initiated...
+[2026-05-08 10:23:01] INFO  Closing database connections...
+[2026-05-08 10:23:02] INFO  Server shutdown complete.
