@@ -6,7 +6,9 @@ import DashboardLayout from './layouts/DashboardLayout';
 import LogsPage from './pages/LogsPage';
 import ErrorsPage from './pages/ErrorsPage';
 import FixesPage from './pages/FixesPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import PrivateRoute from './components/PrivateRoute';
+import realtimeService from './services/realtime';
 import './index.css';
 
 function App() {
@@ -29,6 +31,7 @@ function App() {
             <Route path="logs" element={<LogsPage />} />
             <Route path="errors" element={<ErrorsPage />} />
             <Route path="fixes" element={<FixesPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

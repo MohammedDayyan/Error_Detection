@@ -5,17 +5,210 @@ const ErrorEntry = require('../models/ErrorEntry');
 const LogFile = require('../models/LogFile');
 const FixEntry = require('../models/FixEntry');
 const { getAIFix } = require('../utils/ai');
+const ErrorGroupingService = require('../utils/errorGrouping');
 
 // @route   GET api/errors
-// @desc    Get all errors for a user
+// @desc    Get all errors for a user with grouping
 // @access  Private
 router.get('/', auth, async (req, res) => {
     try {
+        const { group = 'false' } = req.query;
         const errors = await ErrorEntry.find({ userId: req.user.id }).sort({ createdAt: -1 });
-        res.json(errors);
+        
+        if (group === 'true') {
+            const groupingService = new ErrorGroupingService();
+            const groupedErrors = [];
+            const processedGroups = new Set();
+            
+            for (const error of errors) {
+                if (!error.groupId) {
+                    // Group the error if it doesn't have a group
+                    const groupInfo = groupingService.groupError(error, errors);
+                    error.groupId = groupInfo.groupId;
+                    await error.save();
+                }
+                
+                if (!processedGroups.has(error.groupId)) {
+                    const groupStats = groupingService.getGroupStatistics(error.groupId, errors);
+                    groupedErrors.push({
+                        ...error.toObject(),
+                        groupStats,
+                        isGroupRepresentative: true
+                    });
+                    processedGroups.add(error.groupId);
+                }
+            }
+            
+            res.json(groupedErrors);
+        } else {
+            res.json(errors);
+        }
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ msg: err.message || 'Server error' });
+    }
+});
+
+// @route   POST api/errors
+// @desc    Create a new error entry (for SDK integration)
+// @access  Private
+router.post('/', auth, async (req, res) => {
+    const realtime = req.app.get('realtime');
+    try {
+        const { filename, errorMessage, lineNumber, logFileId, type } = req.body;
+
+        // Get existing errors for grouping
+        const existingErrors = await ErrorEntry.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        
+        // Apply error grouping
+        const groupingService = new ErrorGroupingService();
+        const groupInfo = groupingService.groupError({
+            filename,
+            errorMessage,
+            type: type || 'javascript'
+        }, existingErrors);
+
+        const newError = new ErrorEntry({
+            userId: req.user.id,
+            filename,
+            errorMessage,
+            lineNumber,
+            logFileId,
+            groupId: groupInfo.groupId,
+            type: type || 'javascript'
+        });
+
+        const savedError = await newError.save();
+
+        // Broadcast real-time error with group info
+        if (realtime) {
+            realtime.broadcastError(req.user.id, {
+                errorId: savedError._id,
+                filename: savedError.filename,
+                errorMessage: savedError.errorMessage,
+                lineNumber: savedError.lineNumber,
+                groupId: savedError.groupId,
+                isDuplicate: groupInfo.isDuplicate,
+                similarity: groupInfo.similarity,
+                timestamp: savedError.createdAt
+            });
+        }
+
+        res.status(201).json({
+            ...savedError.toObject(),
+            groupInfo
+        });
+    } catch (err) {
+        console.error('Create error failed:', err.message || err);
+        res.status(500).json({ msg: err.message || 'Failed to create error entry' });
+    }
+});
+
+// @route   POST api/errors/ingest
+// @desc    Ingest a single real-time error event
+// @access  Private
+router.post('/ingest', auth, async (req, res) => {
+    try {
+        const {
+            logFileId,
+            filename,
+            errorMessage,
+            stackTrace,
+            lineNumber,
+            severity,
+            source,
+            environment,
+            service,
+            release,
+            platform,
+            metadata
+        } = req.body;
+
+        if (!errorMessage || !filename) {
+            return res.status(400).json({ msg: 'filename and errorMessage are required' });
+        }
+
+        const newError = new ErrorEntry({
+            userId: req.user.id,
+            logFileId: logFileId || null,
+            filename,
+            errorMessage,
+            stackTrace: stackTrace || null,
+            lineNumber: Number.isFinite(Number(lineNumber)) ? Number(lineNumber) : null,
+            severity: severity || 'medium',
+            source: source || 'manual',
+            environment: environment || 'unknown',
+            service: service || 'unknown',
+            release: release || null,
+            platform: platform || null,
+            metadata: metadata && typeof metadata === 'object' ? metadata : {}
+        });
+
+        const saved = await newError.save();
+        const realtime = req.app.get('realtime');
+        if (realtime) {
+            realtime.broadcastToUser(req.user.id, {
+                event: 'error:new',
+                payload: saved
+            });
+        }
+
+        res.status(201).json(saved);
+    } catch (err) {
+        console.error('Ingest error event failed:', err.message || err);
+        res.status(500).json({ msg: err.message || 'Failed to ingest error event' });
+    }
+});
+
+// @route   GET api/errors/trends
+// @desc    Get daily error counts for the last N days
+// @access  Private
+router.get('/trends', auth, async (req, res) => {
+    try {
+        const days = Math.min(Math.max(Number(req.query.days) || 14, 1), 90);
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days + 1);
+        startDate.setHours(0, 0, 0, 0);
+
+        const rows = await ErrorEntry.aggregate([
+            {
+                $match: {
+                    userId: new mongoose.Types.ObjectId(req.user.id),
+                    createdAt: { $gte: startDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        day: {
+                            $dateToString: {
+                                format: '%Y-%m-%d',
+                                date: '$createdAt'
+                            }
+                        }
+                    },
+                    count: { $sum: 1 },
+                    critical: {
+                        $sum: {
+                            $cond: [{ $eq: ['$severity', 'critical'] }, 1, 0]
+                        }
+                    }
+                }
+            },
+            { $sort: { '_id.day': 1 } }
+        ]);
+
+        res.json({
+            days,
+            points: rows.map((row) => ({
+                date: row._id.day,
+                totalErrors: row.count,
+                criticalErrors: row.critical
+            }))
+        });
+    } catch (err) {
+        console.error('Error trends failed:', err.message || err);
+        res.status(500).json({ msg: err.message || 'Failed to load error trends' });
     }
 });
 
@@ -23,6 +216,7 @@ router.get('/', auth, async (req, res) => {
 // @desc    Trigger AI to generate a fix for a specific error
 // @access  Private
 router.post('/:id/fix', auth, async (req, res) => {
+    const realtime = req.app.get('realtime');
     try {
         const errorEntry = await ErrorEntry.findById(req.params.id);
 
@@ -81,6 +275,18 @@ router.post('/:id/fix', auth, async (req, res) => {
         } catch (fixStoreErr) {
             // Do not fail the primary flow if historical data violates FixEntry constraints.
             console.error('FixEntry persistence warning:', fixStoreErr.message || fixStoreErr);
+        }
+
+        // Broadcast real-time update
+        if (realtime) {
+            realtime.broadcastFix(req.user.id, {
+                errorId: errorEntry._id,
+                filename: errorEntry.filename,
+                errorMessage: errorEntry.errorMessage,
+                explanation,
+                fix,
+                timestamp: new Date().toISOString()
+            });
         }
 
         res.json(errorEntry);

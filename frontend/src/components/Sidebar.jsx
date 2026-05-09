@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, LayoutDashboard, AlertTriangle, Wrench, LogOut, User } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, AlertTriangle, Wrench, BarChart3, LogOut, User } from 'lucide-react';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
@@ -57,6 +57,14 @@ export default function Sidebar() {
           style={({ isActive }) => isActive ? { background: 'rgba(34,197,94,0.15)', color: 'var(--success)' } : {}}
         >
           <Wrench size={18} /> Fixes
+        </NavLink>
+        <NavLink
+          to="/dashboard/analytics"
+          id="nav-analytics"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          style={({ isActive }) => isActive ? { background: 'rgba(139,92,246,0.15)', color: '#8b5cf6' } : {}}
+        >
+          <BarChart3 size={18} /> Analytics
         </NavLink>
       </nav>
 

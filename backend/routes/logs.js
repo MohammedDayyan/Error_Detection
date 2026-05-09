@@ -42,7 +42,11 @@ router.post('/upload', auth, upload.single('logfile'), async (req, res) => {
                     logFileId: savedLogFile._id,
                     filename: filename,
                     errorMessage: lines[i].trim(),
-                    lineNumber: i + 1
+                    lineNumber: i + 1,
+                    source: 'log_upload',
+                    severity: 'medium',
+                    environment: 'unknown',
+                    service: 'log-parser'
                 });
             }
         }

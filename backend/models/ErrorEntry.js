@@ -9,7 +9,7 @@ const ErrorEntrySchema = new mongoose.Schema({
   logFileId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'LogFile',
-    required: true
+    required: false
   },
   filename: {
     type: String,
@@ -21,6 +21,57 @@ const ErrorEntrySchema = new mongoose.Schema({
   },
   lineNumber: {
     type: Number
+  },
+  type: {
+    type: String,
+    default: 'javascript'
+  },
+  groupId: {
+    type: String,
+    index: true
+  },
+  stack: {
+    type: String
+  },
+  userAgent: {
+    type: String
+  },
+  url: {
+    type: String
+  },
+  environment: {
+    type: String,
+    default: 'development'
+  },
+  severity: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'critical'],
+    default: 'medium'
+  },
+  source: {
+    type: String,
+    enum: ['browser', 'mobile', 'server', 'log_upload', 'manual'],
+    default: 'manual'
+  },
+  environment: {
+    type: String,
+    default: 'unknown'
+  },
+  service: {
+    type: String,
+    default: 'unknown'
+  },
+  release: {
+    type: String,
+    default: null
+  },
+  platform: {
+    type: String,
+    default: null
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
   aiFix: {
     type: String,

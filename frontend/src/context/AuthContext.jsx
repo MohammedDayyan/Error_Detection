@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import realtimeService from '../services/realtime';
 
 const AuthContext = createContext(null);
 
@@ -12,6 +13,16 @@ export function AuthProvider({ children }) {
     const storedUser = localStorage.getItem('user');
     if (token && storedUser) {
       setUser(JSON.parse(storedUser));
+      // Initialize real-time connection
+      realtimeService.connect(token);
+      // Initialize error SDK
+      if (window.initErrorDetection) {
+        window.initErrorDetection({
+          token,
+          userId: JSON.parse(storedUser).id,
+          environment: 'development'
+        });
+      }
     }
     setLoading(false);
   }, []);
@@ -21,6 +32,19 @@ export function AuthProvider({ children }) {
     localStorage.setItem('token', res.data.token);
     localStorage.setItem('user', JSON.stringify(res.data.user));
     setUser(res.data.user);
+    
+    // Initialize real-time connection
+    realtimeService.connect(res.data.token);
+    
+    // Initialize error SDK
+    if (window.initErrorDetection) {
+      window.initErrorDetection({
+        token: res.data.token,
+        userId: res.data.user.id,
+        environment: 'development'
+      });
+    }
+    
     return res.data;
   };
 
@@ -36,6 +60,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    realtimeService.disconnect();
   };
 
   return (
